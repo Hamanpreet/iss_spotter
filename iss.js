@@ -25,4 +25,29 @@ const fetchMyIP = function(callback) {
   });
 };
 
-module.exports = {fetchMyIP};
+// takes in IP address and returns latitude and longitude for it
+const fetchCoordsByIP = function(ip, callback) {
+  request(`http://ipwho.is/${ip}`, (error, response, body) => {
+    // error can be set if invalid domain, user is offline, etc.
+    if (error) {
+      callback(error, null);
+      return;
+    }
+    // parse the returned body so we can check its information
+    const parsedBody = JSON.parse(body);
+    console.log(parsedBody);
+    // check if "success" is true or not
+    if (!parsedBody.success) {
+      const message = `Success status was ${parsedBody.success}. Server message says: ${parsedBody.message} when fetching for IP ${parsedBody.ip}`;
+      callback(Error(message), null);
+      return;
+    }
+
+    const coordinates = {};
+    coordinates["latitude"] = parsedBody.latitude;
+    coordinates["longitude"] = parsedBody.longitude;
+    callback(null, coordinates);
+  });
+};
+
+module.exports = {fetchMyIP, fetchCoordsByIP};
