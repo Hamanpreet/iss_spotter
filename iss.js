@@ -19,7 +19,6 @@ const fetchMyIP = function(callback) {
       return;
     }
     const ip = JSON.parse(body).ip;
-    //console.log(ip);
     callback(null, ip);
     return;
   });
@@ -35,7 +34,6 @@ const fetchCoordsByIP = function(ip, callback) {
     }
     // parse the returned body so we can check its information
     const parsedBody = JSON.parse(body);
-    //console.log(parsedBody);
     // check if "success" is true or not
     if (!parsedBody.success) {
       const message = `Success status was ${parsedBody.success}. Server message says: ${parsedBody.message} when fetching for IP ${parsedBody.ip}`;
@@ -60,12 +58,11 @@ const fetchCoordsByIP = function(ip, callback) {
  *     [ { risetime: 134564234, duration: 600 }, ... ]
  */
 const fetchISSFlyOverTimes = function(coords, callback) {
-  request(`https://iss-flyover.herokuapp.con/json/?lat=${coords.latitude}&lon=${coords.longitude}`, (error, response, body) => {
-  if (error) {
+  request(`https://iss-flyover.herokuapp.com/json/?lat=${coords.latitude}&lon=${coords.longitude}`, (error, response, body) => {
+    if (error) {
       callback(error, null);
       return;
     }
-    
     if (response.statusCode !== 200) {
       const msg = `Status Code ${response.statusCode} when fetching ISS times for coords: ${body}`;
       callback(Error(msg), null);
@@ -76,4 +73,34 @@ const fetchISSFlyOverTimes = function(coords, callback) {
   });
 };
 
-module.exports = {fetchMyIP, fetchCoordsByIP, fetchISSFlyOverTimes};
+/**
+ * Orchestrates multiple API requests in order to determine the next 5 upcoming ISS fly overs for the user's current location.
+ * Input:
+ *   - A callback with an error or results.
+ * Returns (via Callback):
+ *   - An error, if any (nullable)
+ *   - The fly-over times as an array (null if error):
+ *     [ { risetime: <number>, duration: <number> }, ... ]
+ */
+const nextISSTimesForMyLocation = function(callback) {
+  fetchMyIP((error, ip) => {
+    if (error) {
+      return callback(error, null);
+    }
+    fetchCoordsByIP(ip, (error, loc) => {
+      if (error) {
+        return callback(error, null);
+      }
+
+      fetchISSFlyOverTimes(loc, (error, times) => {
+        if (error) {
+          return callback(error, null);
+        }
+        // we only need the second item(response) from the result
+        callback(null, times.response);
+      });
+    });
+  });
+};
+
+module.exports = {nextISSTimesForMyLocation};
